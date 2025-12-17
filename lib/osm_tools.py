@@ -157,13 +157,24 @@ def download_features_to_layer(polygon: Polygon, layer_name: str, tags: Mapping[
     except Exception as e:
         print(f"An error occurred while saving: {e}")
         
+def save_buffer_polygon(buffer: Polygon, output_path: str | None = None):
+    gdf = gpd.GeoDataFrame(
+        index=[0],
+        crs='epsg:4326',
+        geometry=[buffer]
+    )
+    if output_path == None:
+        os.makedirs('./out/layers/', exist_ok=True)
+        output_path = f'./out/layers/buffer.fgb'
+    gdf.to_file(output_path, driver="FlatGeobuf")
     
 
 if __name__ == "__main__":
     buffer, bbox = create_buffer('./map.geojson')
     print("Fetching OSM data for: " + str(bbox))
     
-    
+    print("Saving buffer")
+    save_buffer_polygon(buffer)
     print("Downloading buildings")
     download_features_to_layer(buffer, "building", {"building" : True})
     print("Downloading roads")
