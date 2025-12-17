@@ -1,0 +1,6 @@
+.env
+out
+data/dem/*
+cache
+**/__pycache__/
+**/.DS_Store
