@@ -14,7 +14,7 @@ def gen_vector_tiles(dir):
 
     input_files_string = " ".join([shlex.quote(f) for f in input_files])
     
-    command = f'tippecanoe -o {dir}/../no_world_output.pmtiles -z14 -f {input_files_string} --drop-densest-as-needed --simplification=5 --detect-shared-borders --read-parallel'
+    command = f'tippecanoe -o {dir}/../output.pmtiles -z14 -f {input_files_string} --drop-densest-as-needed --simplification=5 --detect-shared-borders --read-parallel'
 
     args = shlex.split(command)
 
@@ -41,4 +41,3 @@ def gen_vector_tiles(dir):
 
 if __name__ == "__main__":
     gen_vector_tiles("./out/layers")
-    # merge_with_earth("./out/")
