@@ -1,1 +1,1 @@
-martin ./out/output.pmtiles -l 127.0.0.1:3000
+martin ./out/output.pmtiles ./out/hillshade.mbtiles -l 127.0.0.1:3000
