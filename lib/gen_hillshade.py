@@ -4,9 +4,9 @@ import subprocess
 
 def gen_hillshade_tiles(dir, zlevel: int = 9):
 
-    input_hillshade = Path(dir + "/hillshade.tif")
+    input_hillshade = Path(dir + "/dem/hillshade.tif")
     output_mbtiles = Path(dir + "/hillshade.mbtiles")
-    temp_tif = Path(dir + "/hillshade_3857_alpha.tif")
+    temp_tif = Path(dir + "/dem/hillshade_3857_alpha.tif")
 
     commands = [
         [

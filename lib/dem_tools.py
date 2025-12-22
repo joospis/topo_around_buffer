@@ -67,8 +67,8 @@ def crop_dem_to_buffer(input_path: str, buffer: Polygon, output_path: str | None
     """
     
     if output_path == None:
-        output_path = './out/cropped_dem.tif'
-        os.makedirs('./out', exist_ok=True)
+        output_path = './out/dem/cropped_dem.tif'
+        os.makedirs('./out/dem', exist_ok=True)
     
     geom = [mapping(buffer)]
 
@@ -202,8 +202,8 @@ def generate_hillshade(input_path: str, output_path: str | None = None):
         Path where hillshade GeoTIFF will be written.
     """
     if output_path == None:
-        output_path = './out/hillshade.tif'
-        os.makedirs('./out', exist_ok=True)
+        output_path = './out/dem/hillshade.tif'
+        os.makedirs('./out/dem', exist_ok=True)
         
     dem_ds = gdal.Open(input_path, gdal.GA_ReadOnly)
     if dem_ds is None:
