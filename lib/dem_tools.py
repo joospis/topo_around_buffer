@@ -4,7 +4,6 @@
 import os
 from pathlib import Path
 import subprocess
-import sys
 from bmi_topography import Topography
 import rasterio
 from rasterio.mask import mask
