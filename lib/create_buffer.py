@@ -1,5 +1,4 @@
 import json
-import shapely
 from shapely.geometry import LineString, Polygon, shape
 from BBox import BBox
 from shapely.ops import transform
