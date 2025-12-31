@@ -1,6 +1,8 @@
 .env
 out
+out2
 data/dem/*
 cache
+dem_cache
 **/__pycache__/
 **/.DS_Store
