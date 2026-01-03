@@ -59,10 +59,11 @@ def download_features_to_layer(
     polygon: Polygon, 
     # layer_name: str, 
     tags: Mapping[str, bool | str | list[str]], 
-    output_path: Path
+    output_path: Path,
+    edit_highway_refs = False
 ):
     gdf = osmnx.features_from_polygon(polygon, dict(tags))
-    if "highway" in gdf.columns:
+    if "highway" in gdf.columns and edit_highway_refs:
         gdf = add_shield_fields(gdf)
     os.makedirs(str(output_path.parent), exist_ok=True) # Ensure directory exists
     gdf.to_file(output_path, driver="FlatGeobuf")
@@ -130,7 +131,7 @@ def add_shield_fields(gdf: geopandas.GeoDataFrame):
     
 def main(output_dir: Path, polygon: Polygon):
     layer_dir = output_dir / "temp/osm_layers"
-    download_features_to_layer(polygon, road_tags, layer_dir / "road.fgb")
+    download_features_to_layer(polygon, road_tags, layer_dir / "road.fgb", edit_highway_refs=True)
     download_features_to_layer(polygon, trail_tags, layer_dir / "trail.fgb")
     download_features_to_layer(polygon, landcover_tags, layer_dir / "landcover.fgb")
     download_features_to_layer(polygon, park_area_tags, layer_dir / "park.fgb")
