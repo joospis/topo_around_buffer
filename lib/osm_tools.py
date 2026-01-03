@@ -62,7 +62,8 @@ def download_features_to_layer(
     output_path: Path,
     edit_highway_refs = False
 ):
-    gdf = osmnx.features_from_polygon(polygon, dict(tags))
+    gdf = osmnx.features_from_polygon(polygon, dict(tags)).clip(polygon)
+    
     if "highway" in gdf.columns and edit_highway_refs:
         gdf = add_shield_fields(gdf)
     os.makedirs(str(output_path.parent), exist_ok=True) # Ensure directory exists
