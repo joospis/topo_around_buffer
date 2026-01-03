@@ -137,6 +137,7 @@ def main(output_dir: Path, polygon: Polygon):
     download_features_to_layer(polygon, hydro_tags, layer_dir / "hydro.fgb")
     download_features_to_layer(polygon, railway_tags, layer_dir / "trailway.fgb")
     download_features_to_layer(buffer, {"building" : True}, layer_dir / "building.fgb")
+    save_buffer_polygon(polygon, layer_dir / "buffer.fgb")
 
 if __name__ == "__main__":
     buffer, bbox = create_buffer('./map.geojson')
