@@ -148,7 +148,7 @@ def main(output_dir: Path, bbox: BBox, polygon: Polygon):
     generate_hillshade(cropped_dem_m_path, temp_dir / "hillshade.tif")
     dem_to_feet(cropped_dem_m_path, cropped_dem_ft_path)
     generate_contours(cropped_dem_m_path, temp_dir / "contour_meter.fgb", CONTOUR_METER_INTERVAL, CONTOUR_METER_INDEX_INTERVAL)
-    generate_contours(cropped_dem_m_path, temp_dir / "contour_feet.fgb", CONTOUR_FEET_INTERVAL, CONTOUR_FEET_INDEX_INTERVAL)
+    generate_contours(cropped_dem_ft_path, temp_dir / "contour_feet.fgb", CONTOUR_FEET_INTERVAL, CONTOUR_FEET_INDEX_INTERVAL)
     cropped_dem_m_path.unlink()
     cropped_dem_ft_path.unlink()
     

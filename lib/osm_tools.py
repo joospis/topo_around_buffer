@@ -81,19 +81,24 @@ def save_buffer_polygon(buffer: Polygon, output_path: Path):
 def derive_network(ref: str | None):
     if not ref:
         return None
-    ref = ref.strip()
-    if ref.startswith("I "):
+    # Handle the first part of a multi-ref like "11;VT 30"
+    primary_ref = ref.split(';')[0].strip()
+    
+    if primary_ref.startswith("I "):
         return "us-interstate"
-    if ref.startswith("US "):
+    if primary_ref.startswith("US "):
         return "us-highway"
-    if len(ref) >= 2 and ref[:2].isalpha() and ref[2] == " ":
+    # Matches "VT 30", "NY 5", etc.
+    if re.match(r"^[A-Z]{2}\s\d+", primary_ref):
         return "us-state"
-    return None
+    return "road" # Default for other references
 
 def clean_ref(ref: str | None):
     if not ref:
         return None
-    return re.sub(r"^(I|US|[A-Z]{2})\s+", "", ref).strip()
+    # Take the first ref and strip the network prefix (e.g., "VT 30" -> "30")
+    primary_ref = ref.split(';')[0].strip()
+    return re.sub(r"^(I|US|[A-Z]{2})\s+", "", primary_ref).strip()
 
 def ref_length(ref: str | None):
     cleaned = clean_ref(ref)
