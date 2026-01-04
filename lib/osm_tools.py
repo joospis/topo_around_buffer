@@ -97,8 +97,8 @@ trail_tags = {
     "highway": [
         "path", "track", "footway", "cycleway", "bridleway", "steps", "via_ferrata"
     ],
-    "route": "ferry",
-
+    "route": ["hiking"],
+    "type": "route",
     "trail": "yes",
     "hiking": ["yes", "designated"],
     "mtb": ["yes", "designated"],
@@ -220,7 +220,7 @@ def main(output_dir: Path, polygon: Polygon, relation_id: int):
     download_features_to_layer(polygon, landcover_tags, layer_dir / "landcover.fgb")
     download_features_to_layer(polygon, park_area_tags, layer_dir / "park.fgb")
     download_features_to_layer(polygon, hydro_tags, layer_dir / "hydro.fgb")
-    download_features_to_layer(polygon, railway_tags, layer_dir / "trailway.fgb")
+    download_features_to_layer(polygon, railway_tags, layer_dir / "railway.fgb")
     download_features_to_layer(buffer, {"building" : True}, layer_dir / "building.fgb")
     save_buffer_polygon(polygon, layer_dir / "buffer.fgb")
 
