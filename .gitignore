@@ -4,5 +4,6 @@ out2
 data/dem/*
 cache
 dem_cache
+trail_relation_cache
 **/__pycache__/
 **/.DS_Store
