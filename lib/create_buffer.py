@@ -1,34 +1,112 @@
 import json
-from shapely.geometry import LineString, Polygon, shape
-from BBox import BBox
-from shapely.ops import transform
+from pathlib import Path
+from typing import Iterable, Tuple, cast
+
+import gpxpy
+from shapely.geometry import (
+    shape,
+    GeometryCollection,
+    Polygon,
+    LineString,
+    MultiLineString,
+    MultiPolygon,
+)
+from shapely.ops import unary_union, transform
 from pyproj import Transformer
-from typing import cast
 
-BUFFER_RADIUS = 4000
+from lib.BBox import BBox
 
-def create_buffer(file_path: str) -> tuple[Polygon, BBox]:
+# BUFFER_RADIUS = 500  # meters
+
+
+def _load_geometries(path: Path):
+    """Load geometries from GeoJSON or GPX."""
+    if path.suffix.lower() == ".gpx":
+        return _load_gpx(path)
+
+    with open(path) as f:
+        data = json.load(f)
+
+    if data.get("type") == "FeatureCollection":
+        return [
+            shape(feature["geometry"])
+            for feature in data["features"]
+            if feature.get("geometry")
+        ]
+
+    if data.get("type") == "Feature":
+        return [shape(data["geometry"])]
+
+    return [shape(data)]
+
+
+def _load_gpx(path: Path):
+    """Convert GPX tracks/routes to LineStrings."""
+    with open(path) as f:
+        gpx = gpxpy.parse(f)
+
+    geometries = []
+
+    for track in gpx.tracks:
+        for segment in track.segments:
+            coords = [(p.longitude, p.latitude) for p in segment.points]
+            if len(coords) >= 2:
+                geometries.append(LineString(coords))
+
+    for route in gpx.routes:
+        coords = [(p.longitude, p.latitude) for p in route.points]
+        if len(coords) >= 2:
+            geometries.append(LineString(coords))
+
+    return geometries
+
+
+def create_buffer(file_path: str, buffer_radius) -> Tuple[Polygon, "BBox"]:
     """
-    Load a LineString from GeoJSON, create a buffer polygon, and compute its bounding box.
+    Create a buffer around GeoJSON or GPX geometries and compute a bounding box.
 
-    :param file_path: Path to a GeoJSON file containing a LineString geometry.
-    :return: A tuple of (buffer polygon, bounding box).
-    :raises TypeError: If the GeoJSON geometry is not a LineString.
+    Supports:
+    - LineString / MultiLineString
+    - Polygon / MultiPolygon
+    - Feature / FeatureCollection
+    - GPX tracks & routes
+
+    :param file_path: Path to GeoJSON or GPX file
+    :return: (buffer polygon, bounding box)
     """
-    with open(file_path) as f:
-        geom = shape(json.load(f))    
-    if not isinstance(geom, LineString):
-        raise TypeError
-    
-    lon, lat = geom.centroid.coords[0]
+    path = Path(file_path)
+    geometries = _load_geometries(path)
+
+    if not geometries:
+        raise ValueError("No geometries found in input file")
+
+    merged = unary_union(geometries)
+
+    if not isinstance(
+        merged,
+        (
+            LineString,
+            MultiLineString,
+            Polygon,
+            MultiPolygon,
+            GeometryCollection,
+        ),
+    ):
+        raise TypeError(f"Unsupported geometry type: {type(merged)}")
+
+    lon, lat = merged.centroid.coords[0]
     zone = int((lon + 180) / 6) + 1
-    utm_crs = f"EPSG:{32600 + zone if lat >= 0 else 32700 + zone}"
+    utm_epsg = 32600 + zone if lat >= 0 else 32700 + zone
+    utm_crs = f"EPSG:{utm_epsg}"
 
     to_utm = Transformer.from_crs(4326, utm_crs, always_xy=True).transform
     to_wgs = Transformer.from_crs(utm_crs, 4326, always_xy=True).transform
 
-    geom_utm = transform(to_utm, geom)
-    buffer_utm = cast(Polygon, geom_utm.buffer(BUFFER_RADIUS).simplify(200))
+    merged_utm = transform(to_utm, merged)
+    buffer_utm = cast(
+        Polygon,
+        merged_utm.buffer(buffer_radius).simplify(200),
+    )
     buffer = transform(to_wgs, buffer_utm)
 
     minx, miny, maxx, maxy = buffer.bounds
@@ -41,5 +119,6 @@ def create_buffer(file_path: str) -> tuple[Polygon, BBox]:
     )
 
     return buffer, bbox
+
     
     

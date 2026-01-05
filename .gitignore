@@ -2,7 +2,7 @@
 out
 out2
 data/dem/*
-cache
+osmnx_cache
 dem_cache
 trail_relation_cache
 **/__pycache__/

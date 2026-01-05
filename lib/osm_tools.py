@@ -8,7 +8,10 @@ import requests
 from shapely import Polygon
 import osmnx
 import re
-from create_buffer import create_buffer
+from lib.create_buffer import create_buffer
+from lib import constants
+
+osmnx.settings.cache_folder = Path(__name__).parent / "osmnx_cache"
 
 def get_relation_way_ids(relation_id: int, cache_dir: Path = Path(__name__).parent / "trail_relation_cache") -> set[int]:
     """
@@ -59,20 +62,31 @@ def get_relation_way_ids(relation_id: int, cache_dir: Path = Path(__name__).pare
         return set()
 
 def add_main_trail_flag(gdf: geopandas.GeoDataFrame, way_ids: set[int], column_name: str = "main_trail"):
-    """
-    Adds a 'yes'/'no' column to the GDF if the way ID is in the provided set.
-    """
+    # """
+    # Adds a 'yes'/'no' column to the GDF if the way ID is in the provided set.
+    # """
+    # gdf = gdf.copy()
+    
+    # # OSMnx GDFs usually use a MultiIndex where the second level is the OSM ID
+    # # We'll check if the index is a MultiIndex (standard for osmnx)
+    # if isinstance(gdf.index, pd.MultiIndex):
+    #     gdf[column_name] = gdf.index.get_level_values(1).isin(way_ids)
+    # else:
+    #     gdf[column_name] = gdf.index.isin(way_ids)
+        
+    # # Convert True/False to yes/no to match OSM style if preferred
+    # gdf[column_name] = gdf[column_name].map({True: 'yes', False: 'no'})
+    
+    # return gdf
     gdf = gdf.copy()
     
-    # OSMnx GDFs usually use a MultiIndex where the second level is the OSM ID
-    # We'll check if the index is a MultiIndex (standard for osmnx)
     if isinstance(gdf.index, pd.MultiIndex):
-        gdf[column_name] = gdf.index.get_level_values(1).isin(way_ids)
+        mask = gdf.index.get_level_values(1).isin(way_ids)
     else:
-        gdf[column_name] = gdf.index.isin(way_ids)
-        
-    # Convert True/False to yes/no to match OSM style if preferred
-    gdf[column_name] = gdf[column_name].map({True: 'yes', False: 'no'})
+        mask = gdf.index.isin(way_ids)
+    
+    # Only set 'yes' where mask is True; others stay NaN / unset
+    gdf.loc[mask, column_name] = "yes"
     
     return gdf
 
@@ -191,40 +205,35 @@ def ref_length(ref: str | None):
 
 def add_shield_fields(gdf: geopandas.GeoDataFrame):
     gdf = gdf.copy()
-    gdf["network"] = None
-    gdf["ref_length"] = None
 
-    for idx, row in gdf.iterrows():
-        # idx is ('way', 19675849)
-        ref = row.get("ref")
-        if not ref:
-            continue
+    mask = gdf["ref"].notna()
+    refs = gdf.loc[mask, "ref"].astype(str)
 
-        ref = str(ref)
-        network = derive_network(ref)
-        if not network:
-            continue
-
-        gdf.loc[idx, "network"] = network # type: ignore
-        gdf.loc[idx, "ref"] = clean_ref(ref) # type: ignore
-        gdf.loc[idx, "ref_length"] = ref_length(ref) # type: ignore
+    gdf.loc[mask, "network"] = refs.map(derive_network)
+    gdf.loc[mask, "ref"] = refs.map(clean_ref)
+    gdf.loc[mask, "ref_length"] = refs.map(ref_length)
 
     return gdf
 
+
     
-def main(output_dir: Path, polygon: Polygon, relation_id: int):
+def main(output_dir: Path, polygon: Polygon, relation_id: int | None = None):
     layer_dir = output_dir / "temp/osm_layers"
-    way_ids = get_relation_way_ids(relation_id)
+    if relation_id: print(f"{constants.YELLOW}Fetching relation member IDs for the tral id:{relation_id}...{constants.RESET}")
+    way_ids = get_relation_way_ids(relation_id) if relation_id else None
+    
+    print(f"{constants.YELLOW}Downloading OSM features...{constants.RESET}")
     download_features_to_layer(polygon, road_tags, layer_dir / "road.fgb", edit_highway_refs=True, way_ids=way_ids)
     download_features_to_layer(polygon, trail_tags, layer_dir / "trail.fgb", way_ids=way_ids)
     download_features_to_layer(polygon, landcover_tags, layer_dir / "landcover.fgb")
     download_features_to_layer(polygon, park_area_tags, layer_dir / "park.fgb")
     download_features_to_layer(polygon, hydro_tags, layer_dir / "hydro.fgb")
     download_features_to_layer(polygon, railway_tags, layer_dir / "railway.fgb")
-    download_features_to_layer(buffer, {"building" : True}, layer_dir / "building.fgb")
+    download_features_to_layer(polygon, {"building" : True}, layer_dir / "building.fgb")
+    print(f"{constants.YELLOW}Saving buffer geometry...{constants.RESET}")
     save_buffer_polygon(polygon, layer_dir / "buffer.fgb")
 
-if __name__ == "__main__":
-    buffer, bbox = create_buffer('./map.geojson')
-    output_dir = Path("./out2").resolve()
-    main(output_dir, buffer, 391736)
+# if __name__ == "__main__":
+    # buffer, bbox = create_buffer('./map.geojson')
+    # output_dir = Path("./out2").resolve()
+    # main(output_dir, buffer, 391736)

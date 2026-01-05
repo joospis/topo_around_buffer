@@ -3,6 +3,8 @@ from glob import glob
 import shlex
 import subprocess
 
+from lib import constants
+
 ZOOM_LEVEL=14
 HILLSHADE_ZOOM=9
 OSM_SIMPLIFICATION=5
@@ -83,11 +85,15 @@ def generate_contour_tiles(input_path: Path, output_path: Path):
         print("Error Output:\n", e.stderr)
         
 def main(output_dir: Path):
+    print(f"{constants.YELLOW}Generating contour_meter.pmtiles...{constants.RESET}")
     generate_contour_tiles(output_dir / "temp/contour_meter.fgb", output_dir / "contour_meter.pmtiles")
+    print(f"{constants.YELLOW}Generating contour_feet.pmtiles...{constants.RESET}")
     generate_contour_tiles(output_dir / "temp/contour_feet.fgb", output_dir / "contour_feet.pmtiles")
+    print(f"{constants.YELLOW}Generating hillshade.mbtiles...{constants.RESET}")
     generate_hillshade_tiles(output_dir / "temp/hillshade.tif", output_dir / "hillshade.mbtiles")
+    print(f"{constants.YELLOW}Generating osm.pmtiles...{constants.RESET}")
     generate_osm_tiles(output_dir / "temp/osm_layers", output_dir / "osm.pmtiles")
 
 if __name__ == "__main__":
-    output_dir = Path("./out2").resolve()
+    output_dir = Path("./out3").resolve()
     main(output_dir)

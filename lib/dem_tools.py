@@ -4,17 +4,25 @@
 import os
 from pathlib import Path
 import subprocess
+import warnings
 from bmi_topography import Topography
 import rasterio
 from rasterio.mask import mask
 from shapely.geometry import Polygon, mapping
-from BBox import BBox
-from create_buffer import create_buffer
+from lib.BBox import BBox
+from lib.create_buffer import create_buffer
+from lib import constants
 
 CONTOUR_METER_INTERVAL = 10
 CONTOUR_METER_INDEX_INTERVAL = 100
 CONTOUR_FEET_INTERVAL = 20
 CONTOUR_FEET_INDEX_INTERVAL = 80
+
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    module="bmi_topography.api_key",
+)
 
 def download_from_bbox(bbox: BBox) -> Path:
     """
@@ -140,19 +148,25 @@ def generate_contours(input_path: Path, output_path: Path, interval: int, index_
         raise
 
 def main(output_dir: Path, bbox: BBox, polygon: Polygon):
+    print(f"{constants.YELLOW}Downloading DEM...{constants.RESET}")
     raw_dem_path: Path = download_from_bbox(bbox)
     temp_dir = output_dir / "temp"
     cropped_dem_m_path: Path = temp_dir / "cropped_meters.tif"
     cropped_dem_ft_path: Path = temp_dir / "cropped_feet.tif"
+    print(f"{constants.YELLOW}Cropping DEM to buffer...{constants.RESET}")
     crop_dem_to_buffer(raw_dem_path, polygon, cropped_dem_m_path)
+    print(f"{constants.YELLOW}Generating hillshade...{constants.RESET}")
     generate_hillshade(cropped_dem_m_path, temp_dir / "hillshade.tif")
+    print(f"{constants.YELLOW}Converting DEM into imperial units...{constants.RESET}")
     dem_to_feet(cropped_dem_m_path, cropped_dem_ft_path)
+    print(f"{constants.YELLOW}Creating contour lines in meters...{constants.RESET}")
     generate_contours(cropped_dem_m_path, temp_dir / "contour_meter.fgb", CONTOUR_METER_INTERVAL, CONTOUR_METER_INDEX_INTERVAL)
+    print(f"{constants.YELLOW}Creating contour lines in feet...{constants.RESET}")
     generate_contours(cropped_dem_ft_path, temp_dir / "contour_feet.fgb", CONTOUR_FEET_INTERVAL, CONTOUR_FEET_INDEX_INTERVAL)
     cropped_dem_m_path.unlink()
     cropped_dem_ft_path.unlink()
     
-if __name__ == "__main__":
-    buffer, bbox = create_buffer('./map.geojson')
-    output_dir = Path("./out2").resolve()
-    main(output_dir, bbox, buffer)
+# if __name__ == "__main__":
+#     buffer, bbox = create_buffer('./map.geojson')
+#     output_dir = Path("./out2").resolve()
+#     main(output_dir, bbox, buffer)
