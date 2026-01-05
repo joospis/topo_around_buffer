@@ -1,0 +1,10 @@
+.env
+out
+out2
+out3
+data/dem/*
+osmnx_cache
+dem_cache
+trail_relation_cache
+**/__pycache__/
+**/.DS_Store

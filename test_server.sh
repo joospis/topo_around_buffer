@@ -1,0 +1,1 @@
+martin ./out3/osm.pmtiles ./out3/contour_feet.pmtiles ./out3/contour_meter.pmtiles ./out3/hillshade.mbtiles -l 127.0.0.1:3000
