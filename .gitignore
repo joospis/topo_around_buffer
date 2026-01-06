@@ -9,3 +9,6 @@ trail_relation_cache
 **/__pycache__/
 **/.DS_Store
 topo_from_reference.egg-info
+lt.geojson
+map.geojson
+lt.gpx
