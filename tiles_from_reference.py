@@ -6,7 +6,7 @@ from lib import constants
 from lib.create_buffer import create_buffer
 
 def main():
-    parser = argparse.ArgumentParser("tiles-from-reference")
+    parser = argparse.ArgumentParser("tiles-from-ref")
     parser.add_argument(
             "reference_geometry", 
             help="A gpx or geojson feature collection to use a reference for the map bounds", 
