@@ -20,7 +20,8 @@ The project uses a `pyproject.toml` based install. It is recommended to install 
 The installation creates a global command `tiles-from-ref`.
 
 ```bash
-usage: tiles-from-ref [-h] [--trail_id TRAIL_ID] [--buffer_radius BUFFER_RADIUS] 
-                      reference_geometry output_dir
+tiles-from-ref <reference_geometry> <output_dir> [options]
 ```
+
+This creates the tiles needed for use with [topo_map_style](https://github.com/joospis/topo_map_style)
 
