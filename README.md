@@ -4,7 +4,7 @@ The project uses a `pyproject.toml` based install. It is recommended to install 
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/joospis/topo_around_buffer.git](https://github.com/joospis/topo_around_buffer.git)
+    git clone https://github.com/joospis/topo_around_buffer.git
     cd topo_around_buffer
     ```
 
