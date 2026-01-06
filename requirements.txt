@@ -1,0 +1,12 @@
+bmi_topography==0.9.0
+flatbuffers==25.9.23
+geopandas==1.1.1
+gpxpy==1.6.2
+networkx==3.5
+numpy==2.4.0
+osmnx==2.0.7
+pandas==2.3.3
+pyproj==3.7.2
+rasterio==1.4.3
+Requests==2.32.5
+Shapely==2.1.2
