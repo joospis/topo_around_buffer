@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-from lib import dem_tools, osm_tools, tile_tools
+from lib import dem_tools, graph_tools, osm_tools, tile_tools
 from lib import constants
 from lib.create_buffer import create_buffer
 
@@ -42,5 +42,8 @@ buffer, bbox = create_buffer(str(refernce_path), args.buffer_radius)
 dem_tools.main(output_dir, bbox, buffer)
 osm_tools.main(output_dir, buffer, args.trail_id)
 tile_tools.main(output_dir)
+graph_tools.main(output_dir)
+
+print(f"{constants.GREEN}Done{constants.RESET}")
 
 

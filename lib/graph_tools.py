@@ -1,21 +1,40 @@
+import json
+from pathlib import Path
 import geopandas as gpd
 import pandas as pd
-from shapely.geometry import LineString
+from shapely.geometry import LineString, mapping
 import numpy as np
 import networkx as nx
 import flatbuffers
-from BackcountryMapGraph import Graph, Node, Edge, CumulativeMeasure
+from lib.BackcountryMapGraph import Graph, Node, Edge, CumulativeMeasure
+from lib import constants
 
 def load_data(dir: str):
-    roads = gpd.read_file(dir + "/layers/road.fgb")
-    trails = gpd.read_file(dir + "/layers/trail.fgb")
+    print(f"Loading layers from {dir}...")
     
+    # Ensure these paths match your actual directory structure
+    # Based on your snippet, it looks for ./out3/temp/osm_layers/road.fgb
+    roads_path = dir + "/temp/osm_layers/road.fgb"
+    trails_path = dir + "/temp/osm_layers/trail.fgb"
+    
+    roads = gpd.read_file(roads_path)
+    trails = gpd.read_file(trails_path)
+    
+    print(f" - Raw Roads loaded: {len(roads)}")
+    print(f" - Raw Trails loaded: {len(trails)}")
+    
+    # Combine
     gdf = gpd.GeoDataFrame(
         pd.concat([roads, trails], ignore_index=True),
         crs=roads.crs
     )
     
-    gdf = gdf[gdf.geometry.type == "LineString"].copy() #LineStrings only
+    # --- FIX: Explode MultiLineStrings into simple LineStrings ---
+    # This ensures roads (often MultiLineStrings) aren't dropped by the next filter
+    gdf = gdf.explode(index_parts=False)
+    
+    # Filter for LineStrings only (drops Points/Polygons)
+    gdf = gdf[gdf.geometry.type == "LineString"].copy()
     
     def ensure_3d(line):
         coords = []
@@ -30,9 +49,11 @@ def load_data(dir: str):
     gdf = gdf[gdf.geometry.notnull()]
     gdf = gdf[gdf.geometry.is_valid]
     
+    print(f" - Final valid edges after processing: {len(gdf)}")
+    
     return gdf
 
-def build_graph(gdf: gpd.GeoDataFrame, main_trail_names_factor = {}):
+def build_graph(gdf: gpd.GeoDataFrame):
     """
     Builds:
       - networkx.Graph (weighted)
@@ -87,6 +108,8 @@ def build_graph(gdf: gpd.GeoDataFrame, main_trail_names_factor = {}):
         "track" : 0.5, 
         "footway" : 0.5
     }
+    
+    MAIN_TRAIL_FACTOR = 0.1
 
     for _, row in gdf.iterrows():
         geom: LineString = row.geometry
@@ -100,11 +123,11 @@ def build_graph(gdf: gpd.GeoDataFrame, main_trail_names_factor = {}):
         highway_type = row.get("highway", "")
         trail_factor = TRAIL_FACTOR.get(highway_type, 1.0)
         
-        name = row.get("name", "")
-        
-        name_factor = main_trail_names_factor.get(name, 1.0)
+        # Check if this is a main trail directly from the properties
+        is_main_trail = row.get("main_trail", "") == "yes"
+        priority_factor = MAIN_TRAIL_FACTOR if is_main_trail else 1.0
 
-        weight = length * trail_factor * name_factor
+        weight = length * trail_factor * priority_factor
 
         forward = compute_measures(coords)
         reverse = compute_measures(coords[::-1])
@@ -202,24 +225,75 @@ def export_graph_flatbuffer(
     with open(output_path, "wb") as f:
         f.write(builder.Output())
     
-    
-if __name__ == "__main__":
-    long_trail_names_factor = {
-        "Long Trail" : 0.1,
-        "Appalachian Trail;Long Trail"  : 0.1,
-        "Appalachian Trail; Long Trail"  : 0.1
+
+def export_debug_geojson(nodes, edges, output_path):
+    features = []
+
+    # 1. Export Nodes (Points)
+    for node_id, (x, y, z) in nodes.items():
+        features.append({
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [x, y, z]
+            },
+            "properties": {
+                "type": "node",
+                "id": node_id,
+                "z": z
+            }
+        })
+
+    # 2. Export Edges (Lines)
+    for e in edges:
+        features.append({
+            "type": "Feature",
+            "geometry": mapping(e["geometry"]),
+            "properties": {
+                "type": "edge",
+                "start": e["start"],
+                "end": e["end"],
+                "weight": e["weight"]
+            }
+        })
+
+    geojson = {
+        "type": "FeatureCollection",
+        "features": features
     }
+
+    with open(output_path, "w") as f:
+        json.dump(geojson, f)
+    print(f"Debug GeoJSON written to: {output_path}")
     
-    gdf = load_data('./out')
+def main(output_dir: Path):
+    print(f"{constants.YELLOW}Creating weighted graph...{constants.RESET}")
     
-    G, nodes, edges = build_graph(gdf, long_trail_names_factor)
+    gdf = load_data(str(output_dir.absolute()))
+    G, nodes, edges = build_graph(gdf)
+    export_graph_flatbuffer(
+        nodes,
+        edges,
+        str(output_dir / "graph.bin")
+    )
+    print(f"{constants.YELLOW}FlatBuffer written: backcountry_graph.bin{constants.RESET}")
+    
+    export_debug_geojson(nodes, edges, str(output_dir / "graph_debug.geojson"))
+    print(f"{constants.YELLOW}GeoJSON written: graph_debug.geojson{constants.RESET}")
+
+    
+
+if __name__ == "__main__":
+    gdf = load_data('./out3')
+    
+    G, nodes, edges = build_graph(gdf)
     
     export_graph_flatbuffer(
         nodes,
         edges,
-        "./out/graph.bin"
+        "./out3/graph.bin"
     )
+    
+    export_debug_geojson(nodes, edges, "./out3/graph_debug.geojson")
 
     print("FlatBuffer written: backcountry_graph.bin")
-    
-    
