@@ -1,3 +1,10 @@
+# Create Tiles Around a Buffered Reference Geometry
+
+This tool creates tiles and a weighted graph for use in offline first mobile applications.
+
+![Screenshot of tiles generated around Vermont's Long Trail](images/screenshot.png)
+
+
 ## Installation
 
 The project uses a `pyproject.toml` based install. It is recommended to install in "editable" mode so that the `lib` modules are correctly resolved in the Python path and the command is globally accessible.
