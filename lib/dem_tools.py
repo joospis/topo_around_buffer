@@ -13,6 +13,7 @@ from lib.BBox import BBox
 from lib.create_buffer import create_buffer
 from lib import constants
 
+
 CONTOUR_METER_INTERVAL = 10
 CONTOUR_METER_INDEX_INTERVAL = 100
 CONTOUR_FEET_INTERVAL = 20
@@ -163,10 +164,10 @@ def main(output_dir: Path, bbox: BBox, polygon: Polygon):
     generate_contours(cropped_dem_m_path, temp_dir / "contour_meter.fgb", CONTOUR_METER_INTERVAL, CONTOUR_METER_INDEX_INTERVAL)
     print(f"{constants.YELLOW}Creating contour lines in feet...{constants.RESET}")
     generate_contours(cropped_dem_ft_path, temp_dir / "contour_feet.fgb", CONTOUR_FEET_INTERVAL, CONTOUR_FEET_INDEX_INTERVAL)
-    cropped_dem_m_path.unlink()
+    # cropped_dem_m_path.unlink()
     cropped_dem_ft_path.unlink()
     
-# if __name__ == "__main__":
-#     buffer, bbox = create_buffer('./map.geojson')
-#     output_dir = Path("./out2").resolve()
-#     main(output_dir, bbox, buffer)
+if __name__ == "__main__":
+    buffer, bbox = create_buffer('./long_trail.gpx', 4000)
+    output_dir = Path("./out3").resolve()
+    main(output_dir, bbox, buffer)
