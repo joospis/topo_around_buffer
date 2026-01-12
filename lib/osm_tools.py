@@ -142,7 +142,8 @@ def download_features_to_layer(
     tags: Mapping[str, bool | str | list[str]], 
     output_path: Path,
     edit_highway_refs = False,
-    way_ids: set[int] | None = None
+    way_ids: set[int] | None = None,
+    simplification: float | None = None
 ):
     gdf = osmnx.features_from_polygon(polygon, dict(tags)).clip(polygon)
     
@@ -161,6 +162,10 @@ def download_features_to_layer(
     # If this is the trail layer, add the codes
     if way_ids:
         gdf = add_main_trail_flag(gdf, way_ids)
+    
+    # print("CRS: ", gdf.crs)
+    if (simplification):
+        gdf.geometry = gdf.geometry.simplify(simplification)
         
     
     os.makedirs(str(output_path.parent), exist_ok=True) # Ensure directory exists
@@ -223,17 +228,17 @@ def main(output_dir: Path, polygon: Polygon, relation_id: int | None = None):
     way_ids = get_relation_way_ids(relation_id) if relation_id else None
     
     print(f"{constants.YELLOW}Downloading OSM features...{constants.RESET}")
-    download_features_to_layer(polygon, road_tags, layer_dir / "road.fgb", edit_highway_refs=True, way_ids=way_ids)
-    download_features_to_layer(polygon, trail_tags, layer_dir / "trail.fgb", way_ids=way_ids)
-    download_features_to_layer(polygon, landcover_tags, layer_dir / "landcover.fgb")
-    download_features_to_layer(polygon, park_area_tags, layer_dir / "park.fgb")
-    download_features_to_layer(polygon, hydro_tags, layer_dir / "hydro.fgb")
-    download_features_to_layer(polygon, railway_tags, layer_dir / "railway.fgb")
+    download_features_to_layer(polygon, road_tags, layer_dir / "road.fgb", edit_highway_refs=True, way_ids=way_ids, simplification=0.00005)
+    download_features_to_layer(polygon, trail_tags, layer_dir / "trail.fgb", way_ids=way_ids, simplification=0.00001)
+    download_features_to_layer(polygon, landcover_tags, layer_dir / "landcover.fgb", simplification=0.0001)
+    download_features_to_layer(polygon, park_area_tags, layer_dir / "park.fgb", simplification=0.0001)
+    download_features_to_layer(polygon, hydro_tags, layer_dir / "hydro.fgb", simplification=0.00008)
+    download_features_to_layer(polygon, railway_tags, layer_dir / "railway.fgb", simplification=0.0001)
     download_features_to_layer(polygon, {"building" : True}, layer_dir / "building.fgb")
     print(f"{constants.YELLOW}Saving buffer geometry...{constants.RESET}")
     save_buffer_polygon(polygon, layer_dir / "buffer.fgb")
 
 # if __name__ == "__main__":
-    # buffer, bbox = create_buffer('./map.geojson')
-    # output_dir = Path("./out2").resolve()
-    # main(output_dir, buffer, 391736)
+#     buffer, bbox = create_buffer('./long_trail.gpx', 6000)
+#     output_dir = Path("./out3").resolve()
+#     main(output_dir, buffer, 391736)

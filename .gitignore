@@ -2,6 +2,7 @@
 out
 out2
 out3
+out4
 data/dem/*
 osmnx_cache
 dem_cache

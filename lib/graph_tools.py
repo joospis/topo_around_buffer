@@ -31,42 +31,51 @@ from lib import constants
 
 
 def add_z_to_lines(gdf: gpd.GeoDataFrame, dem_path: Path) -> gpd.GeoDataFrame:
-    """
-    Fast DEM sampling with progress output.
-    """
     print(f" - Sampling DEM Z values from {dem_path}...")
 
     total = len(gdf)
     last_pct = -1
 
     with rasterio.open(dem_path) as dem_ds:
-        dem = dem_ds.read(1)        # ← READ ONCE
+        dem = dem_ds.read(1)
         nodata = dem_ds.nodata
         transform = dem_ds.transform
+        
+        # Get array dimensions
+        height, width = dem.shape
 
         def line_with_z(line: LineString, idx: int):
             nonlocal last_pct
-
+            
+            # Progress tracking
             pct = int((idx / total) * 100)
             if pct != last_pct:
                 print(f"\r   Progress: {pct:3d}%", end="", flush=True)
                 last_pct = pct
 
             coords = np.asarray(line.coords)
-            rows, cols = rowcol(
-                transform, coords[:, 0], coords[:, 1], op=round
-            )
+            rows, cols = rowcol(transform, coords[:, 0], coords[:, 1], op=round)
+            
+            # Convert to numpy arrays for vectorized clipping
+            rows = np.asarray(rows)
+            cols = np.asarray(cols)
+
+            # CLAMP INDICES: Ensure they fall within [0, size-1]
+            # This prevents the IndexError for points on the very edge or slightly outside
+            rows = np.clip(rows, 0, height - 1)
+            cols = np.clip(cols, 0, width - 1)
 
             z = dem[rows, cols]
+            
             if nodata is not None:
                 z = np.where(z == nodata, 0.0, z)
 
-            return LineString(
-                [(x, y, float(zv)) for (x, y), zv in zip(coords[:, :2], z)]
-            )
+            # Reconstruct 3D points
+            new_coords = [(x, y, float(zv)) for (x, y), zv in zip(coords[:, :2], z)]
+            return LineString(new_coords)
 
         gdf["geometry"] = [
-            line_with_z(geom, i) # type: ignore
+            line_with_z(geom, i)  # type: ignore
             for i, geom in enumerate(gdf.geometry, start=1)
         ]
 
