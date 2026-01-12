@@ -29,8 +29,8 @@ def main():
     parser.add_argument(
             "--buffer_radius",
             type=int,
-            default=6000,
-            help="Radius (in meters) of the buffer around the reference geometry. Default: 6000"
+            default=4000,
+            help="Radius (in meters) of the buffer around the reference geometry. Default: 4000"
         )
     args = parser.parse_args()
     # print(args.reference_geometry)
