@@ -23,8 +23,9 @@ dependencies = [
 [project.scripts]
 tiles-from-ref = "tiles_from_reference:main"
 update-db-pois = "update_db_pois:main"
+update-db-map-geom = "update_db_map_geom:main"
 
 [tool.setuptools]
-py-modules = ["tiles_from_reference", "update_db_pois"]
+py-modules = ["tiles_from_reference", "update_db_pois", "update_db_map_geom"]
 packages = ["lib"]
 
