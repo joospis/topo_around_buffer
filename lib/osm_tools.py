@@ -241,6 +241,6 @@ def main(output_dir: Path, polygon: Polygon, relation_id: int | None = None):
     save_buffer_polygon(polygon, layer_dir / "buffer.fgb")
 
 # if __name__ == "__main__":
-#     buffer, bbox = create_buffer('./long_trail.gpx', 6000)
+    # buffer, bbox = create_buffer('./long_trail.gpx', 6000)
 #     output_dir = Path("./out3").resolve()
 #     main(output_dir, buffer, 391736)
