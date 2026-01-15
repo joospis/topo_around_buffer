@@ -23,7 +23,7 @@ def get_topo_app_type(row):
     if 'amenity' in row and row['amenity'] == 'shelter' and ('shelter_type' not in row or row['shelter_type'] == 'lean_to'):
         return 'shelter'
     if 'tourism' in row and row['tourism'] == 'camp_site':
-        return 'campsite'
+        return 'camp_site'
     if 'shelter_type' in row and row['shelter_type'] == 'basic_hut':
         return 'hut'
     if 'tourism' in row and row['tourism'] in ['wilderness_hut', 'alpine_hut']:

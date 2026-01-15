@@ -53,7 +53,7 @@ def main():
             "geom": f"SRID=4326;{geom_wkt}",  # PostGIS format with SRID
             "name": row.get('name') if 'name' in row and pd.notna(row.get('name')) else None,
             "category": row.get('topo_app_type'),
-            "description": (str)(row.get('description')) + " (Imported from OpenStreetMap; may be missing details)" if 'description' in row and pd.notna(row.get('description')) else None,
+            # "description": (str)(row.get('description')) + " (Imported from OpenStreetMap; may be missing details)" if 'description' in row and pd.notna(row.get('description')) else None,
             "osm_type": osm_type,
             "osm_id": osm_id,
             "source": "osm"
@@ -65,7 +65,7 @@ def main():
         try:
             if record['osm_id'] is not None and record['osm_type'] is not None:
                 # Check if exists
-                existing = supabase.table('pois').select('id, description').eq('osm_id', record['osm_id']).eq('osm_type', record['osm_type']).execute()
+                existing = supabase.table('pois').select('id').eq('osm_id', record['osm_id']).eq('osm_type', record['osm_type']).execute()
                 
                 if existing.data:
                     # Existing record found - prepare update
