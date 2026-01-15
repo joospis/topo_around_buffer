@@ -136,12 +136,7 @@ park_area_tags = {
     "protected_area": True,
 }    
 
-poi_tags = {
-    "natural": ["peak", "saddle"],
-    "tourism": ["camp_site", "wilderness_hut", "alpine_hut"],
-    "amenity": ["post_office", "shelter"],
-    "shelter_type": ["lean_to", "basic_hut"]
-}
+
 
 def download_features_to_layer(
     polygon: Polygon, 
@@ -177,28 +172,6 @@ def download_features_to_layer(
     
     os.makedirs(str(output_path.parent), exist_ok=True) # Ensure directory exists
     gdf.to_file(output_path, driver="FlatGeobuf")
-    
-def download_pois(polygon: Polygon, output_path: Path):
-    """
-    Downloads peaks, campsites, shelters, and post offices.
-    """
-    print(f" - Downloading POIs to {output_path.name}...")
-    
-    # Fetch features
-    gdf = osmnx.features_from_polygon(polygon, dict(poi_tags))
-    
-    if gdf.empty:
-        print(f"Warning: No POIs found for {output_path.name}")
-        return
-
-    gdf = gdf.clip(polygon)
-
-    gdf["geometry"] = gdf.geometry.centroid
-    os.makedirs(str(output_path.parent), exist_ok=True)
-    
-    # gdf.to_file(output_path, driver="GeoJSON")
-    with open(output_path, "w") as f:
-        f.write(gdf.to_json(na="drop"))
     
 def save_buffer_polygon(buffer: Polygon, output_path: Path):
     gdf = geopandas.GeoDataFrame(
@@ -264,8 +237,6 @@ def main(output_dir: Path, polygon: Polygon, relation_id: int | None = None):
     download_features_to_layer(polygon, hydro_tags, layer_dir / "hydro.fgb", simplification=0.00008)
     download_features_to_layer(polygon, railway_tags, layer_dir / "railway.fgb", simplification=0.0001)
     download_features_to_layer(polygon, {"building" : True}, layer_dir / "building.fgb")
-    print(f"{constants.YELLOW}Downloading POIs...{constants.RESET}")
-    download_pois(polygon, output_dir / "pois.geojson")
     print(f"{constants.YELLOW}Saving buffer geometry...{constants.RESET}")
     save_buffer_polygon(polygon, layer_dir / "buffer.fgb")
 
