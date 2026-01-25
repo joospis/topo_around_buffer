@@ -13,21 +13,8 @@ from shapely.geometry import LineString
 
 
 # Import your FlatBuffer generated classes
-from lib.BackcountryMapGraph import Graph, Node, Edge, CumulativeMeasure
+from lib.BackcountryMapGraph import Graph, Node, Edge
 from lib import constants
-
-# def sample_dem_z(dem_ds, x, y):
-#     """
-#     Sample DEM at (x, y). Returns float Z or 0.0 if nodata.
-#     """
-#     try:
-#         row, col = dem_ds.index(x, y)
-#         z = dem_ds.read(1)[row, col]
-#         if z == dem_ds.nodata or np.isnan(z):
-#             return 0.0
-#         return float(z)
-#     except Exception:
-#         return 0.0
 
 
 def add_z_to_lines(gdf: gpd.GeoDataFrame, dem_path: Path) -> gpd.GeoDataFrame:
@@ -81,8 +68,6 @@ def add_z_to_lines(gdf: gpd.GeoDataFrame, dem_path: Path) -> gpd.GeoDataFrame:
 
     print("\r   Progress: 100%")
     return gdf
-
-
 
 
 def load_data(dir_path: Path):
@@ -153,30 +138,15 @@ def build_graph(gdf: gpd.GeoDataFrame):
 
     # Match nodes based on 2D coordinates only (X, Y)
     # This ensures connectivity even if elevation (Z) data is slightly noisy.
-    def get_node_id(x, y, z):
+    def get_node_id(x, y):
         nonlocal next_node_id
         # Rounding here acts as a second safety net for the tolerance
         key = (round(x, 5), round(y, 5)) 
         if key not in node_index:
             node_index[key] = next_node_id
-            nodes[next_node_id] = (x, y, z)
+            nodes[next_node_id] = (x, y)
             next_node_id += 1
         return node_index[key]
-
-    def compute_measures(coords):
-        dist = gain = loss = 0.0
-        measures = [(0.0, 0.0, 0.0)]
-        for i in range(1, len(coords)):
-            x1, y1, z1 = coords[i - 1]
-            x2, y2, z2 = coords[i]
-            # Simple Euclidean distance for weight (assuming UTM or small-area Lat/Lon)
-            seg_dist = np.hypot(x2 - x1, y2 - y1)
-            dz = z2 - z1
-            dist += seg_dist
-            if dz > 0: gain += dz
-            else: loss += abs(dz)
-            measures.append((dist, gain, loss))
-        return measures
 
     TRAIL_FACTOR = {"path": 0.5, "track": 0.5, "footway": 0.5}
     MAIN_TRAIL_FACTOR = 0.1
@@ -185,8 +155,9 @@ def build_graph(gdf: gpd.GeoDataFrame):
         geom = row.geometry
         coords = list(geom.coords)
         
-        a_id = get_node_id(*coords[0])
-        b_id = get_node_id(*coords[-1])
+        # Extract 2D coordinates for node matching
+        a_id = get_node_id(coords[0][0], coords[0][1])
+        b_id = get_node_id(coords[-1][0], coords[-1][1])
 
         # Skip zero-length segments created by snapping
         if a_id == b_id: continue
@@ -198,13 +169,18 @@ def build_graph(gdf: gpd.GeoDataFrame):
 
         weight = geom.length * trail_factor * priority_factor
 
+        # Compute bounding box
+        bounds = geom.bounds  # (minx, miny, maxx, maxy)
+
         edges.append({
             "start": a_id,
             "end": b_id,
             "weight": weight,
             "geometry": geom,
-            "measures_forward": compute_measures(coords),
-            "measures_reverse": compute_measures(coords[::-1]),
+            "bbox_min_x": bounds[0],
+            "bbox_min_y": bounds[1],
+            "bbox_max_x": bounds[2],
+            "bbox_max_y": bounds[3],
         })
         G.add_edge(a_id, b_id, weight=weight)
 
@@ -215,12 +191,11 @@ def export_graph_flatbuffer(nodes, edges, output_path):
 
     # Serialize Nodes
     node_offsets = []
-    for node_id, (x, y, z) in nodes.items():
+    for node_id, (x, y) in nodes.items():
         Node.Start(builder)
         Node.AddId(builder, node_id)
         Node.AddX(builder, x)
         Node.AddY(builder, y)
-        Node.AddZ(builder, z)
         node_offsets.append(Node.End(builder))
 
     Graph.StartNodesVector(builder, len(node_offsets))
@@ -233,28 +208,15 @@ def export_graph_flatbuffer(nodes, edges, output_path):
     for e in edges:
         wkb_vec = builder.CreateByteVector(e["geometry"].wkb)
 
-        def build_m_vec(m_list):
-            m_offs = []
-            for d, g, l in m_list:
-                CumulativeMeasure.Start(builder)
-                CumulativeMeasure.AddCumulativeDistance(builder, d)
-                CumulativeMeasure.AddCumulativeGain(builder, g)
-                CumulativeMeasure.AddCumulativeLoss(builder, l)
-                m_offs.append(CumulativeMeasure.End(builder))
-            builder.StartVector(4, len(m_offs), 4)
-            for mo in reversed(m_offs): builder.PrependUOffsetTRelative(mo)
-            return builder.EndVector()
-
-        fwd_vec = build_m_vec(e["measures_forward"])
-        rev_vec = build_m_vec(e["measures_reverse"])
-
         Edge.Start(builder)
         Edge.AddStartNodeId(builder, e["start"])
         Edge.AddEndNodeId(builder, e["end"])
         Edge.AddWeight(builder, e["weight"])
         Edge.AddGeometryWkb(builder, wkb_vec)
-        Edge.AddMeasuresForward(builder, fwd_vec)
-        Edge.AddMeasuresReverse(builder, rev_vec)
+        Edge.AddBboxMinX(builder, e["bbox_min_x"])
+        Edge.AddBboxMinY(builder, e["bbox_min_y"])
+        Edge.AddBboxMaxX(builder, e["bbox_max_x"])
+        Edge.AddBboxMaxY(builder, e["bbox_max_y"])
         edge_offsets.append(Edge.End(builder))
 
     Graph.StartEdgesVector(builder, len(edge_offsets))
@@ -294,4 +256,4 @@ def main(output_dir: Path):
 
 
 if __name__ == "__main__":
-    main(Path("./out3"))
+    main(Path("./out4"))

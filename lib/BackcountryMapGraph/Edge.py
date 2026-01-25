@@ -73,57 +73,35 @@ class Edge(object):
         return o == 0
 
     # Edge
-    def MeasuresForward(self, j):
+    def BboxMinX(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         if o != 0:
-            x = self._tab.Vector(o)
-            x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
-            x = self._tab.Indirect(x)
-            from BackcountryMapGraph.CumulativeMeasure import CumulativeMeasure
-            obj = CumulativeMeasure()
-            obj.Init(self._tab.Bytes, x)
-            return obj
-        return None
+            return self._tab.Get(flatbuffers.number_types.Float64Flags, o + self._tab.Pos)
+        return 0.0
 
     # Edge
-    def MeasuresForwardLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
-        if o != 0:
-            return self._tab.VectorLen(o)
-        return 0
-
-    # Edge
-    def MeasuresForwardIsNone(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
-        return o == 0
-
-    # Edge
-    def MeasuresReverse(self, j):
+    def BboxMinY(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
-            x = self._tab.Vector(o)
-            x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
-            x = self._tab.Indirect(x)
-            from BackcountryMapGraph.CumulativeMeasure import CumulativeMeasure
-            obj = CumulativeMeasure()
-            obj.Init(self._tab.Bytes, x)
-            return obj
-        return None
+            return self._tab.Get(flatbuffers.number_types.Float64Flags, o + self._tab.Pos)
+        return 0.0
 
     # Edge
-    def MeasuresReverseLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
+    def BboxMaxX(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         if o != 0:
-            return self._tab.VectorLen(o)
-        return 0
+            return self._tab.Get(flatbuffers.number_types.Float64Flags, o + self._tab.Pos)
+        return 0.0
 
     # Edge
-    def MeasuresReverseIsNone(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
-        return o == 0
+    def BboxMaxY(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Float64Flags, o + self._tab.Pos)
+        return 0.0
 
 def EdgeStart(builder):
-    builder.StartObject(6)
+    builder.StartObject(8)
 
 def Start(builder):
     EdgeStart(builder)
@@ -158,29 +136,29 @@ def EdgeStartGeometryWkbVector(builder, numElems):
 def StartGeometryWkbVector(builder, numElems):
     return EdgeStartGeometryWkbVector(builder, numElems)
 
-def EdgeAddMeasuresForward(builder, measuresForward):
-    builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(measuresForward), 0)
+def EdgeAddBboxMinX(builder, bboxMinX):
+    builder.PrependFloat64Slot(4, bboxMinX, 0.0)
 
-def AddMeasuresForward(builder, measuresForward):
-    EdgeAddMeasuresForward(builder, measuresForward)
+def AddBboxMinX(builder, bboxMinX):
+    EdgeAddBboxMinX(builder, bboxMinX)
 
-def EdgeStartMeasuresForwardVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
+def EdgeAddBboxMinY(builder, bboxMinY):
+    builder.PrependFloat64Slot(5, bboxMinY, 0.0)
 
-def StartMeasuresForwardVector(builder, numElems):
-    return EdgeStartMeasuresForwardVector(builder, numElems)
+def AddBboxMinY(builder, bboxMinY):
+    EdgeAddBboxMinY(builder, bboxMinY)
 
-def EdgeAddMeasuresReverse(builder, measuresReverse):
-    builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(measuresReverse), 0)
+def EdgeAddBboxMaxX(builder, bboxMaxX):
+    builder.PrependFloat64Slot(6, bboxMaxX, 0.0)
 
-def AddMeasuresReverse(builder, measuresReverse):
-    EdgeAddMeasuresReverse(builder, measuresReverse)
+def AddBboxMaxX(builder, bboxMaxX):
+    EdgeAddBboxMaxX(builder, bboxMaxX)
 
-def EdgeStartMeasuresReverseVector(builder, numElems):
-    return builder.StartVector(4, numElems, 4)
+def EdgeAddBboxMaxY(builder, bboxMaxY):
+    builder.PrependFloat64Slot(7, bboxMaxY, 0.0)
 
-def StartMeasuresReverseVector(builder, numElems):
-    return EdgeStartMeasuresReverseVector(builder, numElems)
+def AddBboxMaxY(builder, bboxMaxY):
+    EdgeAddBboxMaxY(builder, bboxMaxY)
 
 def EdgeEnd(builder):
     return builder.EndObject()

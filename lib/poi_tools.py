@@ -2,8 +2,9 @@ import os
 from pathlib import Path
 import osmnx
 from shapely import Polygon
-
+import geopandas as gpd
 from lib.create_buffer import create_buffer
+import pandas as pd
 
 
 poi_tags = {
@@ -14,20 +15,30 @@ poi_tags = {
 }
 
 def get_topo_app_type(row):
+    # print() # Some are printing as 'nan' but comparing with 'nan', np.nan, and None does not work
+    # if row['name'] == "Kid Gore Shelter":
+    #     print(row)
+    fee = ''
+    if 'fee' in row and row['fee'] == 'yes':
+        fee = '_fee'
     if 'natural' in row and row['natural'] == 'peak':
         return 'peak'
     if 'natural' in row and row['natural'] == 'saddle':
         return 'saddle'
     if 'amenity' in row and row['amenity'] == 'post_office':
         return 'post_office'
-    if 'amenity' in row and row['amenity'] == 'shelter' and ('shelter_type' not in row or row['shelter_type'] == 'lean_to'):
-        return 'shelter'
+    # if 'amenity' in row and row['amenity'] == 'shelter' and ('shelter_type' not in row or row['shelter_type'] == 'lean_to'):
+    #     return 'shelter'
+    if (pd.isna(row['shelter_type'])) and row['amenity'] == 'shelter':
+        return 'shelter' + fee
+    if 'shelter_type' in row and row['shelter_type'] == 'lean_to':
+        return 'shelter' + fee
     if 'tourism' in row and row['tourism'] == 'camp_site':
         return 'camp_site'
     if 'shelter_type' in row and row['shelter_type'] == 'basic_hut':
-        return 'hut'
+        return 'hut' + fee
     if 'tourism' in row and row['tourism'] in ['wilderness_hut', 'alpine_hut']:
-        return 'hut'
+        return 'hut' + fee
     return None
 
 def download_pois(polygon: Polygon, output_path: Path):

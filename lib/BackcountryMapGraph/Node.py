@@ -45,15 +45,8 @@ class Node(object):
             return self._tab.Get(flatbuffers.number_types.Float64Flags, o + self._tab.Pos)
         return 0.0
 
-    # Node
-    def Z(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
-        if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Float64Flags, o + self._tab.Pos)
-        return 0.0
-
 def NodeStart(builder):
-    builder.StartObject(4)
+    builder.StartObject(3)
 
 def Start(builder):
     NodeStart(builder)
@@ -75,12 +68,6 @@ def NodeAddY(builder, y):
 
 def AddY(builder, y):
     NodeAddY(builder, y)
-
-def NodeAddZ(builder, z):
-    builder.PrependFloat64Slot(3, z, 0.0)
-
-def AddZ(builder, z):
-    NodeAddZ(builder, z)
 
 def NodeEnd(builder):
     return builder.EndObject()

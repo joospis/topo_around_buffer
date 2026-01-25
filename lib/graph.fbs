@@ -6,17 +6,8 @@ table Node {
   id:uint;        // Unique identifier for the node (integer mapping from networkx)
   x:double;       // X coordinate (Easting/Longitude)
   y:double;       // Y coordinate (Northing/Latitude)
-  z:double;       // Z coordinate (Elevation)
 }
 
-// --- Measure Record Definition ---
-// This struct holds the cumulative metrics up to a single vertex.
-// Used to build the Measure Table for interpolation.
-table CumulativeMeasure {
-  cumulative_distance:double; // Accumulated distance from the start of the edge
-  cumulative_gain:double;     // Accumulated elevation gain from the start of the edge
-  cumulative_loss:double;     // Accumulated elevation loss from the start of the edge
-}
 
 // --- Edge Definition ---
 // Represents a physical trail or road segment connecting two nodes.
@@ -30,15 +21,12 @@ table Edge {
   // 2. Geometry & Metrics
   geometry_wkb:[ubyte]; // The full 3D LineString geometry (WKB)
 
-  // 3. Interpolation and Output Measures (Asymmetrical)
-  // These tables allow for accurate mid-segment cutting and output calculation 
-  // for both directions of travel.
-
-  // Measures for A -> B travel direction
-  measures_forward:[CumulativeMeasure];
-
-  // Measures for B -> A travel direction (Vertices reversed)
-  measures_reverse:[CumulativeMeasure];
+  // Spatial indexing
+  bbox_min_x:double;
+  bbox_min_y:double;
+  bbox_max_x:double;
+  bbox_max_y:double;
+  
 }
 
 // --- Graph Definition (Root) ---
