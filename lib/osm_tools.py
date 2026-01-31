@@ -5,7 +5,7 @@ from typing import Mapping, cast
 import geopandas
 import pandas as pd
 import requests
-from shapely import Polygon
+from shapely import LineString, MultiLineString, Polygon, line_merge, unary_union
 from shapely.geometry import mapping
 import osmnx
 import re
@@ -225,53 +225,111 @@ def add_shield_fields(gdf: geopandas.GeoDataFrame):
 
     return gdf
     
-def save_main_trail_geometry(gdfs: list[geopandas.GeoDataFrame], output_path: Path, dem_path: Path):
-    """
-    Extracts main trail geometries from multiple GeoDataFrames and saves them as a GeoJSON FeatureCollection.
-    """
-    all_features = []
+# def save_main_trail_geometry(gdfs: list[geopandas.GeoDataFrame], output_path: Path, dem_path: Path):
+#     """
+#     Extracts main trail geometries from multiple GeoDataFrames and saves them as a GeoJSON FeatureCollection.
+#     """
+#     all_features = []
     
+#     for gdf in gdfs:
+#         if gdf is None or gdf.empty:
+#             continue
+            
+#         # Filter to only main trail features
+#         main_trails = gdf[gdf.get("main_trail") == "yes"].copy()
+        
+#         if main_trails.empty:
+#             continue
+        
+#         main_trails = add_z_to_lines(main_trails, dem_path)
+        
+#         # Convert to GeoJSON format
+#         for idx, row in main_trails.iterrows():
+#             feature = {
+#                 "type": "Feature",
+#                 "geometry": mapping(row.geometry),
+#                 # "properties": {
+#                 #     "osm_id": idx[1] if isinstance(idx, tuple) else idx,
+#                 #     "highway": row.get("highway"),
+#                 #     "name": row.get("name"),
+#                 # }
+#             }
+#             all_features.append(feature)
+    
+#     if not all_features:
+#         print(f"Warning: No main trail features found to save")
+#         return
+    
+#     geojson = {
+#         "type": "FeatureCollection",
+#         "features": all_features
+#     }
+    
+#     # Save to file
+#     os.makedirs(output_path.parent, exist_ok=True)
+#     with open(output_path, "w") as f:
+#         json.dump(geojson, f, indent=2)
+    
+#     print(f"{constants.GREEN}Saved main trail geometry ({len(all_features)} features) to {output_path}{constants.RESET}")
+    
+    
+
+def save_main_trail_geometry(
+    gdfs: list[geopandas.GeoDataFrame],
+    output_path: Path,
+    dem_path: Path,
+):
+    """
+    Extracts main trail geometries, merges them, and saves as a single LineString GeoJSON.
+    """
+    lines = []
+
     for gdf in gdfs:
         if gdf is None or gdf.empty:
             continue
-            
-        # Filter to only main trail features
+
         main_trails = gdf[gdf.get("main_trail") == "yes"].copy()
-        
         if main_trails.empty:
             continue
-        
+
         main_trails = add_z_to_lines(main_trails, dem_path)
-        
-        # Convert to GeoJSON format
-        for idx, row in main_trails.iterrows():
-            feature = {
-                "type": "Feature",
-                "geometry": mapping(row.geometry),
-                "properties": {
-                    "osm_id": idx[1] if isinstance(idx, tuple) else idx,
-                    "highway": row.get("highway"),
-                    "name": row.get("name"),
-                }
-            }
-            all_features.append(feature)
-    
-    if not all_features:
-        print(f"Warning: No main trail features found to save")
+
+        for geom in main_trails.geometry:
+            if geom is None:
+                continue
+            if isinstance(geom, LineString):
+                lines.append(geom)
+            elif isinstance(geom, MultiLineString):
+                lines.extend(geom.geoms)
+
+    if not lines:
         return
-    
-    geojson = {
-        "type": "FeatureCollection",
-        "features": all_features
+
+    # Merge everything into one geometry
+    merged = line_merge(unary_union(lines))
+
+    # `linemerge` can still return MultiLineString if topology is disconnected
+    if isinstance(merged, MultiLineString):
+        # Flatten by concatenating coordinates (order-preserving but not topologically smart)
+        coords = []
+        for line in merged.geoms:
+            coords.extend(line.coords)
+        merged = LineString(coords)
+
+    feature = {
+        "type": "Feature",
+        "geometry": mapping(merged),
+        "properties": {},
     }
-    
-    # Save to file
-    os.makedirs(output_path.parent, exist_ok=True)
+
+    feature_collection = {
+        "type": "FeatureCollection",
+        "features": [feature],
+    }
+
     with open(output_path, "w") as f:
-        json.dump(geojson, f, indent=2)
-    
-    print(f"{constants.GREEN}Saved main trail geometry ({len(all_features)} features) to {output_path}{constants.RESET}")
-    
+        json.dump(feature_collection, f)
+
 def main(output_dir: Path, polygon: Polygon, relation_id: int | None = None):
     dem_path = output_dir / "temp/cropped_meters.tif"
     layer_dir = output_dir / "temp/osm_layers"
