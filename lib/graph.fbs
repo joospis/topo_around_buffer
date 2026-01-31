@@ -1,36 +1,39 @@
 namespace BackcountryMapGraph;
 
-// --- Node Definition ---
-// Represents a junction or dead-end (the start/end point of an edge).
 table Node {
-  id:uint;        // Unique identifier for the node (integer mapping from networkx)
-  x:double;       // X coordinate (Easting/Longitude)
-  y:double;       // Y coordinate (Northing/Latitude)
+  id:uint;
+  x:double;
+  y:double;
 }
 
+table Point {
+  x:double;
+  y:double;
+  z:double;
+}
 
-// --- Edge Definition ---
-// Represents a physical trail or road segment connecting two nodes.
+table GeometryMeta {
+  points:[Point];
+  seg_lengths:[double];
+  cumulative_lengths:[double];
+  total_length:double;
+}
+
 table Edge {
-  start_node_id:uint; // The source node ID (A)
-  end_node_id:uint;   // The target node ID (B)
-
-  // 1. Pathfinding Attribute (Symmetrical Cost)
-  weight:double;      // The cost used by Dijkstra's/A* (distance * preference_factor)
-
-  // 2. Geometry & Metrics
-  geometry_wkb:[ubyte]; // The full 3D LineString geometry (WKB)
-
-  // Spatial indexing
+  start_node_id:uint;
+  end_node_id:uint;
+  weight:double;
+  
+  // REMOVED: geometry_wkb:[ubyte];
+  
+  geometry_meta:GeometryMeta;  // Contains all the points needed
+  
   bbox_min_x:double;
   bbox_min_y:double;
   bbox_max_x:double;
   bbox_max_y:double;
-  
 }
 
-// --- Graph Definition (Root) ---
-// The container for the entire graph.
 table Graph {
   nodes:[Node];
   edges:[Edge];

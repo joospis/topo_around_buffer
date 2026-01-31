@@ -6,71 +6,71 @@ import flatbuffers
 from flatbuffers.compat import import_numpy
 np = import_numpy()
 
-class CumulativeMeasure(object):
+class Point(object):
     __slots__ = ['_tab']
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
         n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, offset)
-        x = CumulativeMeasure()
+        x = Point()
         x.Init(buf, n + offset)
         return x
 
     @classmethod
-    def GetRootAsCumulativeMeasure(cls, buf, offset=0):
+    def GetRootAsPoint(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
-    # CumulativeMeasure
+    # Point
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-    # CumulativeMeasure
-    def CumulativeDistance(self):
+    # Point
+    def X(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             return self._tab.Get(flatbuffers.number_types.Float64Flags, o + self._tab.Pos)
         return 0.0
 
-    # CumulativeMeasure
-    def CumulativeGain(self):
+    # Point
+    def Y(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             return self._tab.Get(flatbuffers.number_types.Float64Flags, o + self._tab.Pos)
         return 0.0
 
-    # CumulativeMeasure
-    def CumulativeLoss(self):
+    # Point
+    def Z(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             return self._tab.Get(flatbuffers.number_types.Float64Flags, o + self._tab.Pos)
         return 0.0
 
-def CumulativeMeasureStart(builder):
+def PointStart(builder):
     builder.StartObject(3)
 
 def Start(builder):
-    CumulativeMeasureStart(builder)
+    PointStart(builder)
 
-def CumulativeMeasureAddCumulativeDistance(builder, cumulativeDistance):
-    builder.PrependFloat64Slot(0, cumulativeDistance, 0.0)
+def PointAddX(builder, x):
+    builder.PrependFloat64Slot(0, x, 0.0)
 
-def AddCumulativeDistance(builder, cumulativeDistance):
-    CumulativeMeasureAddCumulativeDistance(builder, cumulativeDistance)
+def AddX(builder, x):
+    PointAddX(builder, x)
 
-def CumulativeMeasureAddCumulativeGain(builder, cumulativeGain):
-    builder.PrependFloat64Slot(1, cumulativeGain, 0.0)
+def PointAddY(builder, y):
+    builder.PrependFloat64Slot(1, y, 0.0)
 
-def AddCumulativeGain(builder, cumulativeGain):
-    CumulativeMeasureAddCumulativeGain(builder, cumulativeGain)
+def AddY(builder, y):
+    PointAddY(builder, y)
 
-def CumulativeMeasureAddCumulativeLoss(builder, cumulativeLoss):
-    builder.PrependFloat64Slot(2, cumulativeLoss, 0.0)
+def PointAddZ(builder, z):
+    builder.PrependFloat64Slot(2, z, 0.0)
 
-def AddCumulativeLoss(builder, cumulativeLoss):
-    CumulativeMeasureAddCumulativeLoss(builder, cumulativeLoss)
+def AddZ(builder, z):
+    PointAddZ(builder, z)
 
-def CumulativeMeasureEnd(builder):
+def PointEnd(builder):
     return builder.EndObject()
 
 def End(builder):
-    return CumulativeMeasureEnd(builder)
+    return PointEnd(builder)

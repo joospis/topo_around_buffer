@@ -46,31 +46,15 @@ class Edge(object):
         return 0.0
 
     # Edge
-    def GeometryWkb(self, j):
+    def GeometryMeta(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
-        return 0
-
-    # Edge
-    def GeometryWkbAsNumpy(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
-        if o != 0:
-            return self._tab.GetVectorAsNumpy(flatbuffers.number_types.Uint8Flags, o)
-        return 0
-
-    # Edge
-    def GeometryWkbLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
-        if o != 0:
-            return self._tab.VectorLen(o)
-        return 0
-
-    # Edge
-    def GeometryWkbIsNone(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
-        return o == 0
+            x = self._tab.Indirect(o + self._tab.Pos)
+            from BackcountryMapGraph.GeometryMeta import GeometryMeta
+            obj = GeometryMeta()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
 
     # Edge
     def BboxMinX(self):
@@ -124,17 +108,11 @@ def EdgeAddWeight(builder, weight):
 def AddWeight(builder, weight):
     EdgeAddWeight(builder, weight)
 
-def EdgeAddGeometryWkb(builder, geometryWkb):
-    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(geometryWkb), 0)
+def EdgeAddGeometryMeta(builder, geometryMeta):
+    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(geometryMeta), 0)
 
-def AddGeometryWkb(builder, geometryWkb):
-    EdgeAddGeometryWkb(builder, geometryWkb)
-
-def EdgeStartGeometryWkbVector(builder, numElems):
-    return builder.StartVector(1, numElems, 1)
-
-def StartGeometryWkbVector(builder, numElems):
-    return EdgeStartGeometryWkbVector(builder, numElems)
+def AddGeometryMeta(builder, geometryMeta):
+    EdgeAddGeometryMeta(builder, geometryMeta)
 
 def EdgeAddBboxMinX(builder, bboxMinX):
     builder.PrependFloat64Slot(4, bboxMinX, 0.0)

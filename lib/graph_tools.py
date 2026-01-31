@@ -13,7 +13,7 @@ from shapely.geometry import LineString
 
 
 # Import your FlatBuffer generated classes
-from lib.BackcountryMapGraph import Graph, Node, Edge
+from lib.BackcountryMapGraph import Graph, Node, Edge, GeometryMeta, Point
 from lib import constants
 
 
@@ -186,6 +186,34 @@ def build_graph(gdf: gpd.GeoDataFrame):
 
     return G, nodes, edges
 
+
+def compute_geometry_meta(geom: LineString):
+    """Pre-compute geometry metadata for faster runtime loading."""
+    coords = list(geom.coords)
+    points = [(x, y, z if len(c := (x, y, z)) == 3 else 0.0) for x, y, z in coords]
+    
+    seg_lengths = []
+    cumulative_lengths = [0.0]
+    total_length = 0.0
+    
+    for i in range(len(points) - 1):
+        x1, y1, z1 = points[i]
+        x2, y2, z2 = points[i + 1]
+        
+        # 2D distance (matching your distSq calculation)
+        seg_len = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        seg_lengths.append(seg_len)
+        total_length += seg_len
+        cumulative_lengths.append(total_length)
+    
+    return {
+        "points": points,
+        "seg_lengths": seg_lengths,
+        "cumulative_lengths": cumulative_lengths,
+        "total_length": total_length
+    }
+
+
 def export_graph_flatbuffer(nodes, edges, output_path):
     builder: flatbuffers.Builder = flatbuffers.Builder(1024)
 
@@ -203,16 +231,51 @@ def export_graph_flatbuffer(nodes, edges, output_path):
         builder.PrependUOffsetTRelative(off)
     nodes_vec = builder.EndVector()
 
-    # Serialize Edges
+    # Serialize Edges with pre-computed geometry metadata
     edge_offsets = []
     for e in edges:
-        wkb_vec = builder.CreateByteVector(e["geometry"].wkb)
-
+        meta = compute_geometry_meta(e["geometry"])
+        
+        # Serialize Points
+        point_offsets = []
+        for x, y, z in meta["points"]:
+            Point.Start(builder)
+            Point.AddX(builder, x)
+            Point.AddY(builder, y)
+            Point.AddZ(builder, z)
+            point_offsets.append(Point.End(builder))
+        
+        GeometryMeta.StartPointsVector(builder, len(point_offsets))
+        for off in reversed(point_offsets):
+            builder.PrependUOffsetTRelative(off)
+        points_vec = builder.EndVector()
+        
+        # Serialize segment lengths
+        GeometryMeta.StartSegLengthsVector(builder, len(meta["seg_lengths"]))
+        for length in reversed(meta["seg_lengths"]):
+            builder.PrependFloat64(length)
+        seg_lengths_vec = builder.EndVector()
+        
+        # Serialize cumulative lengths
+        GeometryMeta.StartCumulativeLengthsVector(builder, len(meta["cumulative_lengths"]))
+        for length in reversed(meta["cumulative_lengths"]):
+            builder.PrependFloat64(length)
+        cumulative_lengths_vec = builder.EndVector()
+        
+        # Build GeometryMeta
+        GeometryMeta.Start(builder)
+        GeometryMeta.AddPoints(builder, points_vec)
+        GeometryMeta.AddSegLengths(builder, seg_lengths_vec)
+        GeometryMeta.AddCumulativeLengths(builder, cumulative_lengths_vec)
+        GeometryMeta.AddTotalLength(builder, meta["total_length"])
+        geometry_meta_offset = GeometryMeta.End(builder)
+        
+        # Build Edge
         Edge.Start(builder)
         Edge.AddStartNodeId(builder, e["start"])
         Edge.AddEndNodeId(builder, e["end"])
         Edge.AddWeight(builder, e["weight"])
-        Edge.AddGeometryWkb(builder, wkb_vec)
+        Edge.AddGeometryMeta(builder, geometry_meta_offset)
         Edge.AddBboxMinX(builder, e["bbox_min_x"])
         Edge.AddBboxMinY(builder, e["bbox_min_y"])
         Edge.AddBboxMaxX(builder, e["bbox_max_x"])
@@ -220,7 +283,8 @@ def export_graph_flatbuffer(nodes, edges, output_path):
         edge_offsets.append(Edge.End(builder))
 
     Graph.StartEdgesVector(builder, len(edge_offsets))
-    for off in reversed(edge_offsets): builder.PrependUOffsetTRelative(off)
+    for off in reversed(edge_offsets): 
+        builder.PrependUOffsetTRelative(off)
     edges_vec = builder.EndVector()
 
     Graph.Start(builder)
@@ -232,6 +296,7 @@ def export_graph_flatbuffer(nodes, edges, output_path):
     with open(output_path, "wb") as f:
         f.write(builder.Output())
 
+
 def export_debug_geojson(edges, output_path):
     features = []
     for e in edges:
@@ -242,6 +307,7 @@ def export_debug_geojson(edges, output_path):
         })
     with open(output_path, "w") as f:
         json.dump({"type": "FeatureCollection", "features": features}, f)
+
 
 def main(output_dir: Path):
     print(f"Building graph in {output_dir}...")
