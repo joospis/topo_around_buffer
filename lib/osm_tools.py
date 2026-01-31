@@ -6,10 +6,12 @@ import geopandas
 import pandas as pd
 import requests
 from shapely import Polygon
+from shapely.geometry import mapping
 import osmnx
 import re
 from lib.create_buffer import create_buffer
 from lib import constants
+from lib.graph_tools import add_z_to_lines
 
 osmnx.settings.cache_folder = Path(__name__).parent / "osmnx_cache"
 
@@ -172,6 +174,7 @@ def download_features_to_layer(
     
     os.makedirs(str(output_path.parent), exist_ok=True) # Ensure directory exists
     gdf.to_file(output_path, driver="FlatGeobuf")
+    return gdf
     
 def save_buffer_polygon(buffer: Polygon, output_path: Path):
     gdf = geopandas.GeoDataFrame(
@@ -221,17 +224,63 @@ def add_shield_fields(gdf: geopandas.GeoDataFrame):
     gdf.loc[mask, "ref_length"] = refs.map(ref_length)
 
     return gdf
-
-
+    
+def save_main_trail_geometry(gdfs: list[geopandas.GeoDataFrame], output_path: Path, dem_path: Path):
+    """
+    Extracts main trail geometries from multiple GeoDataFrames and saves them as a GeoJSON FeatureCollection.
+    """
+    all_features = []
+    
+    for gdf in gdfs:
+        if gdf is None or gdf.empty:
+            continue
+            
+        # Filter to only main trail features
+        main_trails = gdf[gdf.get("main_trail") == "yes"].copy()
+        
+        if main_trails.empty:
+            continue
+        
+        main_trails = add_z_to_lines(main_trails, dem_path)
+        
+        # Convert to GeoJSON format
+        for idx, row in main_trails.iterrows():
+            feature = {
+                "type": "Feature",
+                "geometry": mapping(row.geometry),
+                "properties": {
+                    "osm_id": idx[1] if isinstance(idx, tuple) else idx,
+                    "highway": row.get("highway"),
+                    "name": row.get("name"),
+                }
+            }
+            all_features.append(feature)
+    
+    if not all_features:
+        print(f"Warning: No main trail features found to save")
+        return
+    
+    geojson = {
+        "type": "FeatureCollection",
+        "features": all_features
+    }
+    
+    # Save to file
+    os.makedirs(output_path.parent, exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(geojson, f, indent=2)
+    
+    print(f"{constants.GREEN}Saved main trail geometry ({len(all_features)} features) to {output_path}{constants.RESET}")
     
 def main(output_dir: Path, polygon: Polygon, relation_id: int | None = None):
+    dem_path = output_dir / "temp/cropped_meters.tif"
     layer_dir = output_dir / "temp/osm_layers"
     if relation_id: print(f"{constants.YELLOW}Fetching relation member IDs for the tral id:{relation_id}...{constants.RESET}")
     way_ids = get_relation_way_ids(relation_id) if relation_id else None
     
     print(f"{constants.YELLOW}Downloading OSM features...{constants.RESET}")
-    download_features_to_layer(polygon, road_tags, layer_dir / "road.fgb", edit_highway_refs=True, way_ids=way_ids)
-    download_features_to_layer(polygon, trail_tags, layer_dir / "trail.fgb", way_ids=way_ids)
+    road_gdf = download_features_to_layer(polygon, road_tags, layer_dir / "road.fgb", edit_highway_refs=True, way_ids=way_ids)
+    trail_gdf = download_features_to_layer(polygon, trail_tags, layer_dir / "trail.fgb", way_ids=way_ids)
     download_features_to_layer(polygon, landcover_tags, layer_dir / "landcover.fgb", simplification=0.0001)
     download_features_to_layer(polygon, park_area_tags, layer_dir / "park.fgb", simplification=0.0001)
     download_features_to_layer(polygon, hydro_tags, layer_dir / "hydro.fgb", simplification=0.00008)
@@ -239,6 +288,7 @@ def main(output_dir: Path, polygon: Polygon, relation_id: int | None = None):
     download_features_to_layer(polygon, {"building" : True}, layer_dir / "building.fgb")
     print(f"{constants.YELLOW}Saving buffer geometry...{constants.RESET}")
     save_buffer_polygon(polygon, layer_dir / "buffer.fgb")
+    save_main_trail_geometry([road_gdf, trail_gdf], output_dir / "main_route.json", output_dir / "temp/cropped_meters.tif" )
 
 # if __name__ == "__main__":
     # buffer, bbox = create_buffer('./long_trail.gpx', 6000)
