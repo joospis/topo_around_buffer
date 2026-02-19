@@ -6,6 +6,8 @@ import geopandas as gpd
 from lib.create_buffer import create_buffer
 import pandas as pd
 
+from lib.graph_tools import add_z_to_points
+
 
 poi_tags = {
     "natural": ["peak", "saddle"],
@@ -66,6 +68,8 @@ def download_pois(polygon: Polygon, output_path: Path):
     gdf = gdf[gdf['topo_app_type'].notna()]
 
     gdf = gdf.clip(polygon)
+    
+    gdf = add_z_to_points(gdf, output_path.parent / "temp/cropped_meters.tif")
 
     os.makedirs(str(output_path.parent), exist_ok=True)
     
@@ -74,4 +78,4 @@ def download_pois(polygon: Polygon, output_path: Path):
 
 if __name__ == "__main__":
     buffer, bbox = create_buffer('./long_trail.gpx', 4000)
-    download_pois(buffer, Path('./out4/osm_pois.geojson'))
+    download_pois(buffer, Path('./out/pois.geojson'))

@@ -346,7 +346,8 @@ def main(output_dir: Path, polygon: Polygon, relation_id: int | None = None):
     download_features_to_layer(polygon, {"building" : True}, layer_dir / "building.fgb")
     print(f"{constants.YELLOW}Saving buffer geometry...{constants.RESET}")
     save_buffer_polygon(polygon, layer_dir / "buffer.fgb")
-    save_main_trail_geometry([road_gdf, trail_gdf], output_dir / "main_route.json", output_dir / "temp/cropped_meters.tif" )
+    if relation_id:
+        save_main_trail_geometry([road_gdf, trail_gdf], output_dir / "main_route.json", output_dir / "/temp/cropped_meters.tif" )
 
 # if __name__ == "__main__":
     # buffer, bbox = create_buffer('./long_trail.gpx', 6000)

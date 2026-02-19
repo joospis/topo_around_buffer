@@ -10,12 +10,53 @@ import flatbuffers
 import rasterio
 from rasterio.transform import rowcol
 from shapely.geometry import LineString
+from shapely.geometry import Point as ShapelyPoint
 
 
 # Import your FlatBuffer generated classes
 from lib.BackcountryMapGraph import Graph, Node, Edge, GeometryMeta, Point
 from lib import constants
 
+def add_z_to_points(gdf: gpd.GeoDataFrame, dem_path: Path) -> gpd.GeoDataFrame:
+    print(f" - Sampling DEM Z values from {dem_path}...")
+
+    if gdf.empty:
+        return gdf
+
+    with rasterio.open(dem_path) as dem_ds:
+        dem = dem_ds.read(1)
+        nodata = dem_ds.nodata
+        transform = dem_ds.transform
+
+        height, width = dem.shape
+
+        # Extract XY coordinates
+        coords = np.array([(geom.x, geom.y) for geom in gdf.geometry])
+
+        # Convert to raster row/col
+        rows, cols = rowcol(transform, coords[:, 0], coords[:, 1], op=round)
+
+        rows = np.asarray(rows)
+        cols = np.asarray(cols)
+
+        # Clamp to raster bounds
+        rows = np.clip(rows, 0, height - 1)
+        cols = np.clip(cols, 0, width - 1)
+
+        # Sample elevation
+        z = dem[rows, cols]
+
+        if nodata is not None:
+            z = np.where(z == nodata, 0.0, z)
+
+        # Rebuild geometries as 3D Points
+        gdf["geometry"] = [
+            ShapelyPoint(float(x), float(y), float(zv))
+            for (x, y), zv in zip(coords, z)
+        ]
+
+    print("   Done.")
+    return gdf
 
 def add_z_to_lines(gdf: gpd.GeoDataFrame, dem_path: Path) -> gpd.GeoDataFrame:
     print(f" - Sampling DEM Z values from {dem_path}...")
