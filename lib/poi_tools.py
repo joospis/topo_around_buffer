@@ -16,6 +16,10 @@ poi_tags = {
     # "shelter_type": ["lean_to", "basic_hut"]
 }
 
+water_tags = {
+    "drinking_water": ["yes", "conditional"]
+}
+
 def get_topo_app_type(row):
     # print() # Some are printing as 'nan' but comparing with 'nan', np.nan, and None does not work
     # if row['name'] == "Kid Gore Shelter":
@@ -76,6 +80,40 @@ def download_pois(polygon: Polygon, output_path: Path):
     with open(output_path, "w") as f:
         f.write(gdf.to_json(na="drop"))
 
+def download_water_sources(polygon: Polygon, output_path: Path):
+    """
+    Downloads drinking water sources, excluding shelters and wilderness huts.
+    """
+    print(f" - Downloading water sources to {output_path.name}...")
+    
+    gdf = osmnx.features_from_polygon(polygon, dict(water_tags))
+    
+    if gdf.empty:
+        print(f"Warning: No water sources found for {output_path.name}")
+        return
+    
+    # Exclude shelters and wilderness/alpine huts
+    exclude_amenity = ['shelter']
+    exclude_tourism = ['wilderness_hut', 'alpine_hut', 'camp_site']
+    
+    if 'amenity' in gdf.columns:
+        gdf = gdf[~gdf['amenity'].isin(exclude_amenity)]
+    if 'tourism' in gdf.columns:
+        gdf = gdf[~gdf['tourism'].isin(exclude_tourism)]
+    
+    if gdf.empty:
+        print(f"Warning: No water sources remain after filtering for {output_path.name}")
+        return
+
+    gdf["geometry"] = gdf.geometry.centroid
+    gdf = gdf.clip(polygon)
+    gdf = add_z_to_points(gdf, output_path.parent / "temp/cropped_meters.tif")
+    
+    os.makedirs(str(output_path.parent), exist_ok=True)
+    with open(output_path, "w") as f:
+        f.write(gdf.to_json(na="drop"))
+
 if __name__ == "__main__":
     buffer, bbox = create_buffer('./long_trail.gpx', 4000)
-    download_pois(buffer, Path('./out/pois.geojson'))
+    # download_pois(buffer, Path('./out/pois.geojson'))
+    download_water_sources(buffer, Path('./out/water_sources.geojson'))
