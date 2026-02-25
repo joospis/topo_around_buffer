@@ -4,7 +4,7 @@ from pathlib import Path
 from lib import dem_tools, graph_tools, osm_tools, tile_tools
 from lib import constants
 from lib.create_buffer import create_buffer
-from lib.poi_tools import download_pois
+from lib.poi_tools import download_pois, download_water_sources
 
 def main():
     parser = argparse.ArgumentParser("tiles-from-ref")
@@ -45,6 +45,7 @@ def main():
     graph_tools.main(output_dir)
     print(f"{constants.YELLOW}Downloading POIs...{constants.RESET}")
     download_pois(buffer, output_dir / "pois.geojson")
+    download_water_sources(buffer, output_dir / "water_sources.geojson")
 
     print(f"{constants.GREEN}Done{constants.RESET}")
 
